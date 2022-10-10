@@ -39,7 +39,7 @@ def send_message(bot, message):
     global last_msg
     if last_msg != message:
         try:
-            bot.send_message(TELEGRAM_CHAT_ID, message)  
+            bot.send_message(TELEGRAM_CHAT_ID, message)
             logging.info('Отправлено сообщение в чат!')
         except:
             raise TelegramException('Сообщение не отправлено')
@@ -54,7 +54,7 @@ def get_api_answer(current_timestamp):
     response = requests.get(ENDPOINT, headers=HEADERS, params=params)
     if response.status_code != HTTPStatus.OK:
         raise RequestException(response.status_code)
-    
+
     return response.json()
 
 
@@ -62,13 +62,13 @@ def check_response(response):
     """Проверить ответ на ожидаемые значения"""
     if not isinstance(response, dict):
         raise TypeError('Ответ response не словарь')
-        
+
     if 'homeworks' not in response.keys():
         raise KeyError('Ответ response не содержит ключ homeworks')
 
     if not isinstance(response['homeworks'], list):
         raise TypeError('Ответ response ключ homeworks не список')
-    
+
     return response['homeworks']
 
 
@@ -82,7 +82,7 @@ def parse_status(homework):
     homework_name = homework[keys_name[0]]
     homework_status = homework[keys_name[1]]
     if homework_status not in HOMEWORK_STATUSES.keys():
-        raise KeyError(f'HOMEWORK_STATUSES отсутствует ключ: {homework_status}') 
+        raise KeyError(f'HOMEWORK_STATUSES нет ключа: {homework_status}') 
        
     verdict = HOMEWORK_STATUSES[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
@@ -91,15 +91,15 @@ def parse_status(homework):
 def check_tokens():
     """Проверить переменные окружения на актуальность"""
     error_list = []
-    if PRACTICUM_TOKEN == '' or PRACTICUM_TOKEN == None:
+    if PRACTICUM_TOKEN == '' or PRACTICUM_TOKEN is None:
         error_list.append(name_practicum_token)
 
-    if TELEGRAM_TOKEN == '' or TELEGRAM_TOKEN == None:
+    if TELEGRAM_TOKEN == '' or TELEGRAM_TOKEN is None:
         error_list.append(name_telegram_token)
 
-    if TELEGRAM_CHAT_ID == '' or TELEGRAM_CHAT_ID == None:
+    if TELEGRAM_CHAT_ID == '' or TELEGRAM_CHAT_ID is None:
         error_list.append(name_telegram_chat_id)
-    
+
     if len(error_list):
         logging.critical('Не заполнены токены: {}. Работа остановлена'
                         .format(', '.join(error_list)))
@@ -125,7 +125,7 @@ def main():
             for homework in list_answer:
                 message_new_status = parse_status(homework)
                 send_message(bot, message_new_status)
-            
+
             if len(list_answer) == 0:
                 logging.debug('Нет новых статусов')
 
