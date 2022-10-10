@@ -85,7 +85,7 @@ def parse_status(homework):
         raise KeyError(f'HOMEWORK_STATUSES отсутствует ключ: {homework_status}') 
        
     verdict = HOMEWORK_STATUSES[homework_status]
-    return f'Изменился статус проверки работы "{homework_name}". {verdict}' 
+    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens():
