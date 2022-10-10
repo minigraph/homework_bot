@@ -35,7 +35,7 @@ logging.basicConfig(
 
 
 def send_message(bot, message):
-    """Отправить сообщение боту"""
+    """Отправить сообщение боту."""
     global last_msg
     if last_msg != message:
         try:
@@ -48,7 +48,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(current_timestamp):
-    """Получить ответ API на момент времени"""
+    """Получить ответ API на момент времени."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
     response = requests.get(ENDPOINT, headers=HEADERS, params=params)
@@ -59,7 +59,7 @@ def get_api_answer(current_timestamp):
 
 
 def check_response(response):
-    """Проверить ответ на ожидаемые значения"""
+    """Проверить ответ на ожидаемые значения."""
     if not isinstance(response, dict):
         raise TypeError('Ответ response не словарь')
 
@@ -73,7 +73,7 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """Получить статус задания"""
+    """Получить статус задания."""
     keys_name = ['homework_name', 'status']
     for key in keys_name:
         if key not in homework.keys():
@@ -82,14 +82,14 @@ def parse_status(homework):
     homework_name = homework[keys_name[0]]
     homework_status = homework[keys_name[1]]
     if homework_status not in HOMEWORK_STATUSES.keys():
-        raise KeyError(f'HOMEWORK_STATUSES нет ключа: {homework_status}') 
+        raise KeyError(f'HOMEWORK_STATUSES нет ключа: {homework_status}')
        
     verdict = HOMEWORK_STATUSES[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens():
-    """Проверить переменные окружения на актуальность"""
+    """Проверить переменные окружения на актуальность."""
     error_list = []
     if PRACTICUM_TOKEN == '' or PRACTICUM_TOKEN is None:
         error_list.append(name_practicum_token)
@@ -101,8 +101,10 @@ def check_tokens():
         error_list.append(name_telegram_chat_id)
 
     if len(error_list):
-        logging.critical('Не заполнены токены: {}. Работа остановлена'
-                        .format(', '.join(error_list)))
+        logging.critical(
+            'Не заполнены токены: {}. Работа остановлена'
+            .format(', '.join(error_list))
+        )
 
     return len(error_list) == 0
 
