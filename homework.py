@@ -38,13 +38,11 @@ def send_message(bot, message):
     """Отправить сообщение боту."""
     global last_msg
     if last_msg != message:
-        try:
-            bot.send_message(TELEGRAM_CHAT_ID, message)
-            logging.info('Отправлено сообщение в чат!')
-        except:
+        obj_msg = bot.send_message(TELEGRAM_CHAT_ID, message)
+        if not isinstance(obj_msg, telegram.Message):
             raise TelegramException('Сообщение не отправлено')
-        else:
-            last_msg = message
+        logging.info('Отправлено сообщение в чат!')
+        last_msg = message
 
 
 def get_api_answer(current_timestamp):
@@ -83,7 +81,7 @@ def parse_status(homework):
     homework_status = homework[keys_name[1]]
     if homework_status not in HOMEWORK_STATUSES.keys():
         raise KeyError(f'HOMEWORK_STATUSES нет ключа: {homework_status}')
-       
+
     verdict = HOMEWORK_STATUSES[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
