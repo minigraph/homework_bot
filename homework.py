@@ -175,8 +175,6 @@ def main():
                 f'При получении словаря из response: {error}',
                 bot
             )
-        except Exception as error:
-            check_report(report, f'Сбой в работе программы: {error}', bot)
         else:
             logging.info('Новый запрос к API')
         finally:
