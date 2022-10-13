@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from json import JSONDecodeError
 import logging
 import os
 import requests
@@ -11,7 +12,6 @@ from users_exception import TelegramException
 
 load_dotenv()
 
-last_msg = ''
 name_practicum_token = 'PRACTICUM_TOKEN'
 name_telegram_token = 'TELEGRAM_TOKEN'
 name_telegram_chat_id = 'CHAT_ID'
@@ -23,37 +23,57 @@ RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
-HOMEWORK_STATUSES = {
+HOMEWORK_VERDICTS = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
-logging.basicConfig(
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    level=logging.INFO)
-
 
 def send_message(bot, message):
     """Отправить сообщение боту."""
-    global last_msg
-    if last_msg != message:
+    try:
         obj_msg = bot.send_message(TELEGRAM_CHAT_ID, message)
-        if not isinstance(obj_msg, telegram.Message):
-            raise TelegramException('Сообщение не отправлено')
+    except Exception as error:
+        raise TelegramException(f'Ошибка при отправке сообщения {error}')
+    else:
         logging.info('Отправлено сообщение в чат!')
-        last_msg = message
+
+    if not isinstance(obj_msg, telegram.Message):
+        raise TelegramException('Сообщение не отправлено')
 
 
 def get_api_answer(current_timestamp):
     """Получить ответ API на момент времени."""
-    timestamp = current_timestamp or int(time.time())
-    params = {'from_date': timestamp}
-    response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-    if response.status_code != HTTPStatus.OK:
-        raise RequestException(response.status_code)
+    logging.info('Начало получения ответа API')
+    request_params = {
+        'url': ENDPOINT,
+        'params': {
+            'from_date': current_timestamp or int(time.time())
+        },
+        'headers': HEADERS,
+    }
 
-    return response.json()
+    try:
+        response = requests.get(**request_params)
+    except Exception as error:
+        raise RequestException(
+            f'Ошибка GET: {request_params}; Текст: {error}'
+        )
+
+    if response.status_code != HTTPStatus.OK:
+        exception_text = (
+            f'Код ответа: {response.status_code}; '
+            f'Параметры: {request_params}'
+            f'Текст ответа: {response.text}'
+        )
+        raise RequestException(exception_text)
+
+    try:
+        json_answer = response.json()
+    except Exception:
+        raise JSONDecodeError('Ошибка при разпознавании JSON')
+    return json_answer
 
 
 def check_response(response):
@@ -72,6 +92,9 @@ def check_response(response):
 
 def parse_status(homework):
     """Получить статус задания."""
+    if not isinstance(homework, dict):
+        raise TypeError('Элемент homework не словарь')
+
     keys_name = ['homework_name', 'status']
     for key in keys_name:
         if key not in homework.keys():
@@ -79,44 +102,54 @@ def parse_status(homework):
 
     homework_name = homework[keys_name[0]]
     homework_status = homework[keys_name[1]]
-    if homework_status not in HOMEWORK_STATUSES.keys():
-        raise KeyError(f'HOMEWORK_STATUSES нет ключа: {homework_status}')
+    if homework_status not in HOMEWORK_VERDICTS.keys():
+        raise KeyError(f'HOMEWORK_VERDICTS нет ключа: {homework_status}')
 
-    verdict = HOMEWORK_STATUSES[homework_status]
+    verdict = HOMEWORK_VERDICTS[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens():
     """Проверить переменные окружения на актуальность."""
-    error_list = []
-    if PRACTICUM_TOKEN == '' or PRACTICUM_TOKEN is None:
-        error_list.append(name_practicum_token)
+    error = any([
+        PRACTICUM_TOKEN == '', PRACTICUM_TOKEN is None,
+        TELEGRAM_TOKEN == '', TELEGRAM_TOKEN is None,
+        TELEGRAM_CHAT_ID == '', TELEGRAM_CHAT_ID is None,
+    ])
 
-    if TELEGRAM_TOKEN == '' or TELEGRAM_TOKEN is None:
-        error_list.append(name_telegram_token)
+    if error:
+        logging.critical('Не заполнены токены! Работа остановлена')
 
-    if TELEGRAM_CHAT_ID == '' or TELEGRAM_CHAT_ID is None:
-        error_list.append(name_telegram_chat_id)
+    return not error
 
-    if len(error_list):
-        logging.critical(
-            'Не заполнены токены: {}. Работа остановлена'
-            .format(', '.join(error_list))
-        )
 
-    return len(error_list) == 0
+def check_report(report, message, bot=None):
+    """Проверка и занесения в report данных по ошибке."""
+    logging.error(message)
+    if bot is not None and report.current != report.previous:
+        send_message(bot, message)
+        report.current = report.previous
 
 
 def main():
     """Основная логика работы бота."""
+    logging.basicConfig(
+        format=('%(asctime)s - %(levelname)s - %(message)s'
+                '- func:%(funcName)s, line:%(lineno)d'),
+        level=logging.INFO)
     logging.info('Начата работа бота')
     if not check_tokens():
-        return False
+        exit()
 
     logging.info('Инициализация бота')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
     logging.info('Формирование запроса к API')
+
+    report = {
+        'current': 'current',
+        'previous': 'previous',
+    }
 
     while True:
         try:
@@ -131,20 +164,19 @@ def main():
 
             current_timestamp = int(time.time())
         except TelegramException as error:
-            message = f'Ошибка Telegram: {error}'
-            logging.error(message)
+            check_report(report, f'Ошибка Telegram: {error}')
         except RequestException as error:
-            message = f'HTTPЗапрос вернул код: {error}'
-            logging.error(message)
-            send_message(bot, message)
+            check_report(report, f'HTTPЗапрос вернул код: {error}', bot)
         except KeyError as error:
-            message = f'В словаре {error}'
-            logging.error(message)
-            send_message(bot, message)
+            check_report(report, f'В словаре {error}', bot)
+        except JSONDecodeError as error:
+            check_report(
+                report,
+                f'При получении словаря из response: {error}',
+                bot
+            )
         except Exception as error:
-            message = f'Сбой в работе программы: {error}'
-            logging.error(message)
-            send_message(bot, message)
+            check_report(report, f'Сбой в работе программы: {error}', bot)
         else:
             logging.info('Новый запрос к API')
         finally:
