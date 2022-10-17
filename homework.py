@@ -31,7 +31,7 @@ HOMEWORK_VERDICTS = {
 
 
 def send_message(bot, message):
-    """Отправить сообщение боту."""
+    """Отправить сообщение боту в Telegram."""
     try:
         obj_msg = bot.send_message(TELEGRAM_CHAT_ID, message)
     except Exception as error:
@@ -133,10 +133,6 @@ def check_report(report, message, bot=None):
 
 def main():
     """Основная логика работы бота."""
-    logging.basicConfig(
-        format=('%(asctime)s - %(levelname)s - %(message)s'
-                '- func:%(funcName)s, line:%(lineno)d'),
-        level=logging.INFO)
     logging.info('Начата работа бота')
     if not check_tokens():
         exit()
@@ -182,4 +178,8 @@ def main():
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        format=('%(asctime)s - %(levelname)s - %(message)s'
+                '- func:%(funcName)s, line:%(lineno)d'),
+        level=logging.INFO)
     main()
