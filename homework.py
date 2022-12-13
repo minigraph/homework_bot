@@ -139,8 +139,7 @@ def main():
 
     logging.info('Инициализация бота')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    # current_timestamp = int(time.time())
-    current_timestamp = 1670686955
+    current_timestamp = int(time.time())
     logging.info('Формирование запроса к API')
 
     report = {
