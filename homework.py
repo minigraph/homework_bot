@@ -19,7 +19,7 @@ PRACTICUM_TOKEN = os.getenv(name_practicum_token)
 TELEGRAM_TOKEN = os.getenv(name_telegram_token)
 TELEGRAM_CHAT_ID = os.getenv(name_telegram_chat_id)
 
-RETRY_TIME = 600
+RETRY_TIME = 900
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
@@ -126,9 +126,9 @@ def check_tokens():
 def check_report(report, message, bot=None):
     """Проверка и занесения в report данных по ошибке."""
     logging.error(message)
-    if bot is not None and report.current != report.previous:
+    if bot is not None and report['current'] != report['previous']:
         send_message(bot, message)
-        report.current = report.previous
+        report['current'] = report['previous']
 
 
 def main():
@@ -139,7 +139,8 @@ def main():
 
     logging.info('Инициализация бота')
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time())
+    # current_timestamp = int(time.time())
+    current_timestamp = 1670686955
     logging.info('Формирование запроса к API')
 
     report = {
